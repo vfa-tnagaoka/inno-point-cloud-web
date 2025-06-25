@@ -4829,6 +4829,8 @@ async function createWasm() {
       GLctx.currentElementArrayBufferBinding = ibo ? (ibo.name | 0) : 0;
     };
 
+  var _glBlendFunc = (x0, x1) => GLctx.blendFunc(x0, x1);
+
   var _glBufferData = (target, size, data, usage) => {
   
       if (GL.currentContext.version >= 2) {
@@ -5209,6 +5211,8 @@ async function createWasm() {
       cb.clientside = false;
       GLctx.vertexAttribPointer(index, size, type, !!normalized, stride, ptr);
     };
+
+  var _glViewport = (x0, x1, x2, x3) => GLctx.viewport(x0, x1, x2, x3);
 
   
   
@@ -6868,6 +6872,25 @@ async function createWasm() {
   };
   var _glfwCreateWindow = (width, height, title, monitor, share) => GLFW.createWindow(width, height, title, monitor, share);
 
+  var _glfwGetFramebufferSize = (winid, width, height) => {
+      var ww = 0;
+      var wh = 0;
+  
+      var win = GLFW.WindowFromId(winid);
+      if (win) {
+        ww = win.framebufferWidth;
+        wh = win.framebufferHeight;
+      }
+  
+      if (width) {
+        HEAP32[((width)>>2)] = ww;
+      }
+  
+      if (height) {
+        HEAP32[((height)>>2)] = wh;
+      }
+    };
+
   var _glfwInit = () => {
       if (GLFW.windows) return 1; // GL_TRUE
   
@@ -7612,6 +7635,8 @@ var wasmImports = {
   /** @export */
   glBindVertexArray: _glBindVertexArray,
   /** @export */
+  glBlendFunc: _glBlendFunc,
+  /** @export */
   glBufferData: _glBufferData,
   /** @export */
   glClear: _glClear,
@@ -7656,7 +7681,11 @@ var wasmImports = {
   /** @export */
   glVertexAttribPointer: _glVertexAttribPointer,
   /** @export */
+  glViewport: _glViewport,
+  /** @export */
   glfwCreateWindow: _glfwCreateWindow,
+  /** @export */
+  glfwGetFramebufferSize: _glfwGetFramebufferSize,
   /** @export */
   glfwInit: _glfwInit,
   /** @export */
