@@ -1141,6 +1141,30 @@ async function createWasm() {
       }
     };
 
+  var maybeCStringToJsString = (cString) => {
+      // "cString > 2" checks if the input is a number, and isn't of the special
+      // values we accept here, EMSCRIPTEN_EVENT_TARGET_* (which map to 0, 1, 2).
+      // In other words, if cString > 2 then it's a pointer to a valid place in
+      // memory, and points to a C string.
+      return cString > 2 ? UTF8ToString(cString) : cString;
+    };
+  
+  /** @type {Object} */
+  var specialHTMLTargets = [0, typeof document != 'undefined' ? document : 0, typeof window != 'undefined' ? window : 0];
+  /** @suppress {duplicate } */
+  var findEventTarget = (target) => {
+      target = maybeCStringToJsString(target);
+      var domElement = specialHTMLTargets[target] || (typeof document != 'undefined' ? document.querySelector(target) : null);
+      return domElement;
+    };
+  var findCanvasEventTarget = findEventTarget;
+  var _emscripten_get_canvas_element_size = (target, width, height) => {
+      var canvas = findCanvasEventTarget(target);
+      if (!canvas) return -4;
+      HEAP32[((width)>>2)] = canvas.width;
+      HEAP32[((height)>>2)] = canvas.height;
+    };
+
   var getHeapMax = () =>
       // Stay one Wasm page short of 4GB: while e.g. Chrome is able to allocate
       // full 4GB Wasm memories, the size will wrap back to 0 bytes in Wasm side
@@ -6872,25 +6896,6 @@ async function createWasm() {
   };
   var _glfwCreateWindow = (width, height, title, monitor, share) => GLFW.createWindow(width, height, title, monitor, share);
 
-  var _glfwGetFramebufferSize = (winid, width, height) => {
-      var ww = 0;
-      var wh = 0;
-  
-      var win = GLFW.WindowFromId(winid);
-      if (win) {
-        ww = win.framebufferWidth;
-        wh = win.framebufferHeight;
-      }
-  
-      if (width) {
-        HEAP32[((width)>>2)] = ww;
-      }
-  
-      if (height) {
-        HEAP32[((height)>>2)] = wh;
-      }
-    };
-
   var _glfwInit = () => {
       if (GLFW.windows) return 1; // GL_TRUE
   
@@ -7209,8 +7214,6 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
   'stringToUTF32',
   'lengthBytesUTF32',
   'registerKeyEventCallback',
-  'maybeCStringToJsString',
-  'findEventTarget',
   'getBoundingClientRect',
   'fillMouseEventData',
   'registerMouseEventCallback',
@@ -7372,6 +7375,8 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
   'writeArrayToMemory',
   'JSEvents',
   'specialHTMLTargets',
+  'maybeCStringToJsString',
+  'findEventTarget',
   'findCanvasEventTarget',
   'currentFullscreenStrategy',
   'restoreOldWindowedStyle',
@@ -7613,6 +7618,8 @@ var wasmImports = {
   /** @export */
   _tzset_js: __tzset_js,
   /** @export */
+  emscripten_get_canvas_element_size: _emscripten_get_canvas_element_size,
+  /** @export */
   emscripten_resize_heap: _emscripten_resize_heap,
   /** @export */
   emscripten_set_main_loop: _emscripten_set_main_loop,
@@ -7684,8 +7691,6 @@ var wasmImports = {
   glViewport: _glViewport,
   /** @export */
   glfwCreateWindow: _glfwCreateWindow,
-  /** @export */
-  glfwGetFramebufferSize: _glfwGetFramebufferSize,
   /** @export */
   glfwInit: _glfwInit,
   /** @export */
